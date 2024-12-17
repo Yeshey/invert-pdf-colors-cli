@@ -111,10 +111,15 @@ def process_page(page_file, tmp_dir):
 
     # Convert to SVG
     svg_file = tmp_dir / f"{basename}.svg"
-    run_cmd(f"unshare --user inkscape {page_file} --export-filename={svg_file} --pdf-font-strategy=substitute")
+    run_cmd(f"unshare --user inkscape {page_file} --export-filename={svg_file} --pdf-font-strategy=substitute --export-plain-svg")
+    shutil.copy(svg_file, "/mnt/DataDisk/PersonalFiles/2024/Projects/Programming/invert-pdf-colors/")
+
+    print("ok1")
 
     with open(svg_file) as f:
         lines = f.readlines()
+
+    print("ok2")
 
     img_ctr = -1
     for i, line in enumerate(lines):
@@ -123,8 +128,14 @@ def process_page(page_file, tmp_dir):
 
         # Process images
         if "data:image" in line:
+            print("ok4")
             img_ctr += 1
-            lines[i] = process_embedded_image(line, img_ctr, tmp_dir, basename)
+            thing = process_embedded_image(line, img_ctr, tmp_dir, basename)
+            print("thing:")
+            print(thing)
+            lines[i] = thing
+            print("ok5")
+    print("ok6")
 
     # Add page numbers
     if pagenumbers:
@@ -134,6 +145,8 @@ def process_page(page_file, tmp_dir):
     inverted_svg = tmp_dir / f"{basename}_inv.svg"
     with open(inverted_svg, "w") as f:
         f.writelines(lines)
+
+    shutil.copy(inverted_svg, "/mnt/DataDisk/PersonalFiles/2024/Projects/Programming/invert-pdf-colors/")
 
     # Convert back to PDF
     output_pdf = tmp_dir / f"output_{basename}.pdf"
@@ -146,29 +159,65 @@ def replace_svg_colors(line):
     import re
     return re.sub(r"#([0-9a-fA-F]{6})", lambda m: f"#{replace_color(m.group(1))}", line)
 
-# Process embedded images
 def process_embedded_image(line, img_ctr, tmp_dir, basename):
     import base64
     import re
 
-    match = re.search(r"data:image/(\w+);base64,(.*)", line)
+    # Match embedded base64 images in SVG
+    match = re.search(r'data:image/(\w+);base64,([^"]+)', line)
     if not match:
+        if DEBUG:
+            print(f"No match found in line: {line}")
         return line
 
     img_type, img_data = match.groups()
     img_file = tmp_dir / f"{basename}_{img_ctr}.{img_type}"
+    intermediate_file = tmp_dir / f"{basename}_{img_ctr}_processed.png"
+
+    if DEBUG:
+        print(f"Processing image {img_ctr} of type {img_type} from line.")
+
+    # Decode and save the base64 image
     with open(img_file, "wb") as f:
         f.write(base64.b64decode(img_data))
 
+    if DEBUG:
+        print(f"Image {img_ctr} saved to {img_file}")
+
+    # Flatten transparency and save to an intermediate file
+    #run_cmd(f"magick {img_file} -background white -alpha remove -alpha off PNG32:{intermediate_file}")
+    #if DEBUG:
+    #    print(f"Flattened transparency for image {img_ctr}")
+
+    # Trim and negate the image, if needed
     if trim_color:
-        run_cmd(f"magick {img_file} -bordercolor '{trim_color}' -border 1 -shave 1x1 {img_file}")
+        run_cmd(f"magick {intermediate_file} -bordercolor '{trim_color}' -border 1 -shave 1x1 {intermediate_file}")
+        if DEBUG:
+            print(f"Trimmed image {img_ctr} with color {trim_color}")
 
-    if should_convert_image(0, img_ctr):  # Adjust for page index if needed
-        run_cmd(f"magick {img_file} -negate {img_file}")
+    if should_convert_image(0, img_ctr):
+        run_cmd(f"magick {intermediate_file} -channel RGB -negate {intermediate_file}")
+        if DEBUG:
+            print(f"Negated image {img_ctr}")
 
-    with open(img_file, "rb") as f:
+    # Re-encode the processed image to base64
+    with open(intermediate_file, "rb") as f:
         encoded = base64.b64encode(f.read()).decode()
-    return f'data:image/{img_type};base64,{encoded}'
+
+    if DEBUG:
+        print(f"Re-encoded image {img_ctr} to base64")
+
+    # Replace the existing line with the correctly formatted xlink:href attribute
+    updated_line = re.sub(
+        r'data:image/(\w+);base64,([^"]+)',
+        f'xlink:href="data:image/{img_type};base64,{encoded}"',
+        line
+    )
+
+    if DEBUG:
+        print(f"Updated line for image {img_ctr}: {updated_line.strip()}")
+
+    return updated_line
 
 # Add page numbers
 def add_page_numbers(lines, basename):
