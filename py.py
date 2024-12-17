@@ -8,6 +8,7 @@ import tempfile
 import subprocess
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
+import time
 
 # Modify this function to accept arguments and process a page
 def process_page_wrapper(args):
@@ -228,6 +229,10 @@ def main():
         with ProcessPoolExecutor() as executor:
             results = executor.map(process_page_wrapper, args_list)
             output_pages.extend(results)
+
+        # to see what is happening in /tmp before he deletes everything
+        # print ("done")
+        # time.sleep(555)
 
         # Merge pages
         run_cmd(f"pdftk {' '.join(map(str, output_pages))} cat output {output_file}")
