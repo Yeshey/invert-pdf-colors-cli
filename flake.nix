@@ -4,13 +4,13 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
     # Older nixpkgs version (pinned)
-    oldnixpkgs.url = "https://github.com/NixOS/nixpkgs/archive/9957cd48326fe8dbd52fdc50dd2502307f188b0d.tar.gz";
+    # oldnixpkgs.url = "https://github.com/NixOS/nixpkgs/archive/9957cd48326fe8dbd52fdc50dd2502307f188b0d.tar.gz";
 
     # Systems input for multi-system builds
     systems.url = "github:nix-systems/default";
   };
 
-  outputs = { self, systems, nixpkgs, oldnixpkgs, ... }:
+  outputs = { self, systems, nixpkgs, ... }:
   let
     # Helper to apply a function over all systems
     eachSystem = f:
@@ -22,18 +22,17 @@
         # Default pkgs (unstable)
         pkgs = nixpkgs.legacyPackages.${system};
 
-        # Older pkgs (specific commit)
-        pkgs-old = import oldnixpkgs {
-          inherit system;
-        };
-
         # Define a Ruby environment
         rubyEnv = pkgs.ruby.withPackages (ruby-pkgs: with ruby-pkgs; [
           parallel  # Optional: for parallel processing
         ]);
 
+        # Older pkgs (specific commit)
+        #pkgs-old = import oldnixpkgs {
+        #  inherit system;
+        #};
         # Older version of Inkscape
-        olderInkscape = pkgs-old.inkscape;
+        # olderInkscape = pkgs-old.inkscape;
 
       in {
         default = pkgs.mkShell {
