@@ -24,6 +24,7 @@ And run with `python3 -u py.py input.pdf output.pdf`
 >
 > You can try something like `nix-shell -p ghostscript --command "gs -sDEVICE=pdfwrite -dPDFSETTINGS=/ebook -q -o output.pdf file.pdf"` ([from my techNotes](https://github.com/Yeshey/TechNotes?tab=readme-ov-file#1123-compress)) to compress your pdf if it's too big for the site 🤷
 
+There is also (https://github.com/keotl/invert-pdf) but it converts to raster as well, but allows bigger files.
 
 ## Acknowledgements
 
