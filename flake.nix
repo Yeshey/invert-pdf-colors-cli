@@ -3,9 +3,6 @@
     # Default nixpkgs (unstable)
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
-    # Older nixpkgs version (pinned)
-    # oldnixpkgs.url = "https://github.com/NixOS/nixpkgs/archive/9957cd48326fe8dbd52fdc50dd2502307f188b0d.tar.gz";
-
     # Systems input for multi-system builds
     systems.url = "github:nix-systems/default";
   };
@@ -21,23 +18,9 @@
       let
         # Default pkgs (unstable)
         pkgs = nixpkgs.legacyPackages.${system};
-
-        # Define a Ruby environment
-        rubyEnv = pkgs.ruby.withPackages (ruby-pkgs: with ruby-pkgs; [
-          parallel  # Optional: for parallel processing
-        ]);
-
-        # Older pkgs (specific commit)
-        #pkgs-old = import oldnixpkgs {
-        #  inherit system;
-        #};
-        # Older version of Inkscape
-        # olderInkscape = pkgs-old.inkscape;
-
       in {
         default = pkgs.mkShell {
           packages = [
-            rubyEnv
             pkgs.ghostscript
             pkgs.imagemagick
             pkgs.inkscape
@@ -49,12 +32,47 @@
             ]))
           ];
 
+          # export bc of https://gitlab.com/inkscape/inkscape/-/issues/4716, also whyy using unshare in ruby code 
           shellHook = ''
             export SELF_CALL=xxx
-
             echo "Ruby PDF Inverter shell is ready! All dependencies installed."
             echo "Run with ./pdfinvert.rb input.pdf inverted_sample.pdf"
           '';
+        };
+      });
+
+    # Default app to run the Python script
+    apps = eachSystem (system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+        pythonEnv = pkgs.python312.withPackages (python-pkgs: with python-pkgs; [ pymupdf ]);
+      in {
+        default = {
+          type = "app";
+          program = "${pkgs.writeShellScript "run-pdf-inverter" ''
+            #!/bin/sh
+            exec ${pythonEnv}/bin/python3 ${self}/py.py "$@"
+          ''}";
+        };
+      });
+
+
+    # Provide a package for the script if desired
+    packages = eachSystem (system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+      in {
+        default = pkgs.buildEnv {
+          name = "pdf-inverter";
+          paths = [
+            pkgs.ghostscript
+            pkgs.imagemagick
+            pkgs.inkscape
+            pkgs.pdftk
+            pkgs.poppler_utils
+            pkgs.coreutils
+            (pkgs.python312.withPackages (python-pkgs: with python-pkgs; [ pymupdf ]))
+          ];
         };
       });
   };
