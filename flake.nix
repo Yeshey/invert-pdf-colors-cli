@@ -17,6 +17,15 @@
         rubyEnv = pkgs.ruby.withPackages (ruby-pkgs: with ruby-pkgs; [
           parallel  # Optional: for parallel processing
         ]);
+
+      #myPkg = import (builtins.fetchGit {
+          # Descriptive name to make the store path easier to identify
+       #   name = "my-old-revision";
+      #    url = "https://github.com/NixOS/nixpkgs/";
+      #    ref = "refs/heads/nixpkgs-unstable";
+      #    rev = "f76bef61369be38a10c7a1aa718782a60340d9ff";
+      #}) {};
+
       in {
         default = pkgs.mkShell {
           packages = [

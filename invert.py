@@ -7,7 +7,6 @@ import shutil
 import tempfile
 import subprocess
 from pathlib import Path
-from concurrent.futures import ProcessPoolExecutor
 
 DEBUG = True
 
@@ -20,12 +19,8 @@ def run_cmd(command):
         return False
     return True
 
-def process_page(page_file_str, tmp_dir_str):
-    # Convert input to Path objects
-    page_file = Path(page_file_str)
-    tmp_dir = Path(tmp_dir_str)
-    
-    basename = page_file.stem
+def process_page(page_file, tmp_dir):
+    basename = Path(page_file).stem
 
     # Convert PDF page to SVG
     svg_file = tmp_dir / f"{basename}.svg"
@@ -45,7 +40,10 @@ def process_page(page_file_str, tmp_dir_str):
     output_pdf = tmp_dir / f"output_{basename}.pdf"
     run_cmd(f"inkscape {inverted_svg} --export-filename={output_pdf}")
 
-    return str(output_pdf)
+    #output_pdf = tmp_dir / f"output_{basename}.pdf"
+    #run_cmd(f"pdftk {inverted_svg} output {output_pdf}")
+
+    return output_pdf
 
 def main():
     # Argument parsing
@@ -67,15 +65,15 @@ def main():
 
         # Find and process pages
         pages = sorted(tmp_dir.glob("page_*.pdf"))
-        page_strs = [str(p) for p in pages]
-        tmp_dir_str = str(tmp_dir)
+        output_pages = []
 
-        # Process pages in parallel
-        with ProcessPoolExecutor() as executor:
-            output_pages = list(executor.map(process_page, page_strs, [tmp_dir_str]*len(page_strs)))
+        # Process pages sequentially
+        for page in pages:
+            output_page = process_page(page, tmp_dir)
+            output_pages.append(output_page)
 
         # Merge inverted pages
-        run_cmd(f"pdftk {' '.join(output_pages)} cat output {output_file}")
+        run_cmd(f"pdftk {' '.join(map(str, output_pages))} cat output {output_file}")
         print(f"Done! Output written to {output_file}")
 
 if __name__ == "__main__":
