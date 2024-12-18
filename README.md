@@ -18,7 +18,7 @@ Otherwise, please install these packages:
 And run with `python3 -u py.py input.pdf output.pdf`
 
 > [!WARNING]  
-> Confirm all images are present in the final pdf, check [known-issues](#known-issues)
+> Confirm images and formatting in the resulting pdf, check [known-issues](#known-issues)
 > 
 > If it didn't work correctly, the best alternative to my knowledge are online pdf inverters like: https://www.pdfconvertonline.com/invert-pdf/
 >
@@ -32,6 +32,8 @@ Script based of of this [ruby script from this answer](https://superuser.com/a/9
 
 ## Known-Issues
 
+- All hyperlinks will be lost
+- Some fonts might not be found and will be converted to paths, we should add fonts with nix, or maybe add an option to substitute missing fonts instead of drawing them.
 - Some imgs might be missing, this is dependent on inkscape, see [issues](https://github.com/Yeshey/invert-pdf-colors-cli/issues/1#issue-2745659588)
-- It substitutes all missing fonts for the closest font, so if there are some fonts missing it might look a bit different, we should add fonts with nix, or maybe add an option to draw missing fonts instead of substituting them.
-
+- Always adds a white background to make sure there is not a transparent background, we should somehow check if there is an object serving as background already.
+- Nix dependencies and libraries in the code are also a mess, ughh

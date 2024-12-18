@@ -29,6 +29,7 @@
             pkgs.coreutils
             (pkgs.python312.withPackages (python-pkgs: with python-pkgs; [
               pymupdf
+              pypdf
             ]))
             pkgs.fontconfig
           ];

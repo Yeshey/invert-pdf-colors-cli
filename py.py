@@ -9,6 +9,8 @@ import subprocess
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
 import time
+import xml.etree.ElementTree as ET
+import re
 
 # Modify this function to accept arguments and process a page
 def process_page_wrapper(args):
@@ -27,6 +29,66 @@ output_file = ""
 color_rules = {}
 color_order = []
 image_rules = []
+
+def add_background_path_to_svg(svg_path, pdf_path):
+    """Add a white background path immediately after the <svg> tag."""
+    import xml.etree.ElementTree as ET
+    import re
+
+    # Define namespaces
+    ET.register_namespace('', 'http://www.w3.org/2000/svg')
+
+    # Read the SVG file content
+    with open(svg_path, 'r') as f:
+        svg_content = f.read()
+
+    if DEBUG:
+        print(f"Original SVG content loaded from {svg_path}")
+
+    # Match the opening <svg> tag and extract attributes
+    svg_match = re.search(r'(<svg[^>]*>)', svg_content)
+    if not svg_match:
+        print("Invalid SVG file: Missing opening <svg> tag")
+        time.sleep(555)
+
+    svg_tag = svg_match.group(1)
+    #if DEBUG:
+    #    print(f"Extracted <svg> tag: {svg_tag}")
+
+    # Parse the viewBox attribute to get dimensions
+    viewbox_match = re.search(r'viewBox="(\d+ \d+ \d+ \d+)"', svg_tag)
+    if viewbox_match:
+        _, _, width, height = map(int, viewbox_match.group(1).split())
+        if DEBUG:
+            print(f"Parsed viewBox dimensions: width={width}, height={height}")
+    else:
+        # Fallback to width/height attributes
+        width_match = re.search(r'width="(\d+)"', svg_tag)
+        height_match = re.search(r'height="(\d+)"', svg_tag)
+        if not width_match or not height_match:
+            raise ValueError("Invalid SVG file: Missing viewBox or width/height attributes")
+        width = int(width_match.group(1))
+        height = int(height_match.group(1))
+        if DEBUG:
+            print(f"Parsed width/height attributes: width={width}, height={height}")
+
+    # Create the background path with the parsed dimensions
+    background_path_d = f'M 0 0 L {width} 0 L {width} {height} L 0 {height} Z'
+    background_path_element = f'<path xmlns="http://www.w3.org/2000/svg" fill="#ffffff" stroke="none" d="{background_path_d}"/>'
+    if DEBUG:
+        print(f"Generated background path element: {background_path_element}")
+
+    # Insert the background path immediately after the <svg> tag
+    insert_index = svg_match.end()
+    modified_svg = svg_content[:insert_index] + '\n' + background_path_element + svg_content[insert_index:]
+
+    # Write the modified SVG back to the file
+    with open(svg_path, 'w') as f:
+        f.write(modified_svg)
+
+    if DEBUG:
+        print(f"Background path added and SVG updated: {svg_path}")
+
 
 # Parse command-line arguments
 def parse_args():
@@ -112,8 +174,12 @@ def process_page(page_file, tmp_dir):
 
     # Convert to SVG
     svg_file = tmp_dir / f"{basename}.svg"
-    run_cmd(f"unshare --user inkscape {page_file} --export-filename={svg_file} --pdf-font-strategy=substitute --export-plain-svg")
-    #shutil.copy(svg_file, "/mnt/DataDisk/PersonalFiles/2024/Projects/Programming/invert-pdf-colors/")
+    run_cmd(f"unshare --user inkscape {page_file} --export-filename={svg_file} --export-plain-svg") # --pdf-font-strategy=substitute
+    # shutil.copy(svg_file, tmp_dir / f"{basename}_before_evrything.svg")
+
+    add_background_path_to_svg(svg_file, pdf_path=page_file)
+
+    # shutil.copy(svg_file, tmp_dir / f"{basename}_w_bk.svg")
 
     with open(svg_file) as f:
         lines = f.readlines()
@@ -243,8 +309,8 @@ def main():
             output_pages.extend(results)
 
         # to see what is happening in /tmp before he deletes everything
-        # print ("done")
-        # time.sleep(555)
+        #print ("done")
+        #time.sleep(555)
 
         # Merge pages
         run_cmd(f"pdftk {' '.join(map(str, output_pages))} cat output {output_file}")
