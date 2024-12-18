@@ -118,15 +118,23 @@ def process_page(page_file, tmp_dir):
     with open(svg_file) as f:
         lines = f.readlines()
 
+    in_mask_tag = False
+
     img_ctr = -1
     for i, line in enumerate(lines):
+        # Track if we're inside a mask tag
+        if "<mask" in line:
+            in_mask_tag = True
+        elif "</mask>" in line:
+            in_mask_tag = False
+
         # Replace colors
         lines[i] = replace_svg_colors(line)
 
         # Process images
         if "data:image" in line:
             img_ctr += 1
-            lines[i] = process_embedded_image(line, img_ctr, tmp_dir, basename)
+            lines[i] = process_embedded_image(line, img_ctr, tmp_dir, basename, is_in_mask=in_mask_tag)
 
     # Add page numbers
     if pagenumbers:
@@ -151,9 +159,13 @@ def replace_svg_colors(line):
     return re.sub(r"#([0-9a-fA-F]{6})", lambda m: f"#{replace_color(m.group(1))}", line)
 
 
-def process_embedded_image(line, img_ctr, tmp_dir, basename):
+def process_embedded_image(line, img_ctr, tmp_dir, basename, is_in_mask=False):
     import base64
     import re
+
+    # If the image is inside a mask, return the line unchanged
+    if is_in_mask:
+        return line
 
     # Match base64-encoded images
     match = re.search(r'data:image/(\w+);base64,([^"]+)', line)

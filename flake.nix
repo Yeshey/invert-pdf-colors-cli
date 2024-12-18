@@ -30,11 +30,23 @@
             (pkgs.python312.withPackages (python-pkgs: with python-pkgs; [
               pymupdf
             ]))
+            pkgs.fontconfig
           ];
 
-          # export bc of https://gitlab.com/inkscape/inkscape/-/issues/4716, also whyy using unshare in ruby code 
           shellHook = ''
+            # bc of https://gitlab.com/inkscape/inkscape/-/issues/4716, also why using unshare in code 
             export SELF_CALL=xxx
+
+            # for this error? https://askubuntu.com/questions/359753/gtk-warning-locale-not-supported-by-c-library-when-starting-apps-from-th
+            export LC_ALL="en_US"
+            export LANG="en_US"
+            export LANGUAGE="en_NZ"
+            export C_CTYPE="en_US"
+            export LC_NUMERIC=
+            export LC_TIME=en"en_US"
+            # or (https://discourse.nixos.org/t/fonts-in-nix-installed-packages-on-a-non-nixos-system/5871/8)
+            set --global --export FONTCONFIG_FILE ${pkgs.fontconfig.out}/etc/fonts/fonts.conf
+
             echo "Ruby PDF Inverter shell is ready! All dependencies installed."
             echo "Run with ./pdfinvert.rb input.pdf inverted_sample.pdf"
           '';
