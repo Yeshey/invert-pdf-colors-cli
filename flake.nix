@@ -1,3 +1,6 @@
+# actually, nix run isn't working, idk how to fix it, maybe look at something like:
+# https://github.com/snowfallorg/nix-software-center/blob/main/flake.nix
+
 {
   inputs = {
     # Default nixpkgs (unstable)
