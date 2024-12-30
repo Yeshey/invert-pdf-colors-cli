@@ -58,19 +58,25 @@ def add_background_path_to_svg(svg_path, pdf_path):
     # Parse the viewBox attribute to get dimensions
     viewbox_match = re.search(r'viewBox="(\d+ \d+ \d+ \d+)"', svg_tag)
     if viewbox_match:
-        _, _, width, height = map(int, viewbox_match.group(1).split())
+        _, _, width, height = map(float, viewbox_match.group(1).split())
         if DEBUG:
             print(f"Parsed viewBox dimensions: width={width}, height={height}")
     else:
         # Fallback to width/height attributes
-        width_match = re.search(r'width="(\d+)"', svg_tag)
-        height_match = re.search(r'height="(\d+)"', svg_tag)
+        width_match = re.search(r'width="([\d.]+)"', svg_tag)
+        height_match = re.search(r'height="([\d.]+)"', svg_tag)
         if not width_match or not height_match:
             raise ValueError("Invalid SVG file: Missing viewBox or width/height attributes")
-        width = int(width_match.group(1))
-        height = int(height_match.group(1))
+        width = float(width_match.group(1))
+        height = float(height_match.group(1))
         if DEBUG:
             print(f"Parsed width/height attributes: width={width}, height={height}")
+
+    # Convert to integers for the background path
+    width = int(round(width))
+    height = int(round(height))
+    if DEBUG:
+        print(f"Rounded dimensions for path: width={width}, height={height}")
 
     # Create the background path with the parsed dimensions
     background_path_d = f'M 0 0 L {width} 0 L {width} {height} L 0 {height} Z'
