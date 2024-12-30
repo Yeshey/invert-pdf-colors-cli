@@ -33,7 +33,6 @@ Script based of of this [ruby script from this answer](https://superuser.com/a/9
 ## Known-Issues
 
 - All hyperlinks will be lost
-- Some fonts might not be found and will be converted to paths, we should add fonts with nix, or maybe add an option to substitute missing fonts instead of drawing them.
+- Some fonts might not be found and will be converted to paths (actually most of them seem to not be found), we should add fonts with nix, or maybe add an option to substitute missing fonts instead of drawing them.
 - Some imgs might be missing, this is dependent on inkscape, see [issues](https://github.com/Yeshey/invert-pdf-colors-cli/issues/1#issue-2745659588)
 - Always adds a white background to make sure there is not a transparent background, we should somehow check if there is an object serving as background already.
-- Nix dependencies and libraries in the code are also a mess, ughh

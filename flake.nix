@@ -1,95 +1,64 @@
-# actually, nix run isn't working, idk how to fix it, maybe look at something like:
-# https://github.com/snowfallorg/nix-software-center/blob/main/flake.nix
-
 {
-  inputs = {
-    # Default nixpkgs (unstable)
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+  inputs.poetry2nix.url = "github:nix-community/poetry2nix";
 
-    # Systems input for multi-system builds
-    systems.url = "github:nix-systems/default";
-  };
+  # built based on this template https://github.com/NixOS/templates/blob/master/python/flake.nix
+  # With the help of this video: https://www.youtube.com/watch?v=oqXWrkvZ59g
 
-  outputs = { self, systems, nixpkgs, ... }:
-  let
-    # Helper to apply a function over all systems
-    eachSystem = f:
-      nixpkgs.lib.genAttrs (import systems) (system: f system);
+  # This issue is why we use unshare --user inkscape: https://gitlab.com/inkscape/inkscape/-/issues/4716 
 
-  in {
-    devShells = eachSystem (system:
-      let
-        # Default pkgs (unstable)
-        pkgs = nixpkgs.legacyPackages.${system};
+  outputs = { self, nixpkgs, poetry2nix }:
+    let
+      supportedSystems = [ "x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin" ];
+      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+      pkgs = forAllSystems (system: nixpkgs.legacyPackages.${system});
+
+      developmentAndRuntimePackages = system: with pkgs.${system}; [ 
+        ghostscript
+        imagemagick
+        inkscape
+        pdftk
+        poppler_utils
+      ];
+    in
+    {
+      packages = forAllSystems (system: let
+        inherit (poetry2nix.lib.mkPoetry2Nix { pkgs = pkgs.${system}; }) mkPoetryApplication;
       in {
-        default = pkgs.mkShell {
-          packages = [
-            pkgs.ghostscript
-            pkgs.imagemagick
-            pkgs.inkscape
-            pkgs.pdftk
-            pkgs.poppler_utils  # For pdftocairo
-            pkgs.coreutils
-            (pkgs.python312.withPackages (python-pkgs: with python-pkgs; [
-              pymupdf
-              pypdf
-            ]))
-            pkgs.fontconfig
-          ];
-
-          shellHook = ''
-            # bc of https://gitlab.com/inkscape/inkscape/-/issues/4716, also why using unshare in code 
-            export SELF_CALL=xxx
-
-            # for this error? https://askubuntu.com/questions/359753/gtk-warning-locale-not-supported-by-c-library-when-starting-apps-from-th
-            export LC_ALL="en_US"
-            export LANG="en_US"
-            export LANGUAGE="en_NZ"
-            export C_CTYPE="en_US"
-            export LC_NUMERIC=
-            export LC_TIME=en"en_US"
-            # or (https://discourse.nixos.org/t/fonts-in-nix-installed-packages-on-a-non-nixos-system/5871/8)
-            set --global --export FONTCONFIG_FILE ${pkgs.fontconfig.out}/etc/fonts/fonts.conf
-
-            echo "Ruby PDF Inverter shell is ready! All dependencies installed."
-            echo "Run with ./pdfinvert.rb input.pdf inverted_sample.pdf"
-          '';
+        default = mkPoetryApplication { 
+          projectDir = self; 
+          #nativeBuildInputs = [
+          #  pkgs.${system}.cmatrix
+          #];
+          #buildInputs = [
+          #  pkgs.${system}.cmatrix
+          #];
+          propagatedBuildInputs = with pkgs.${system}; [
+            
+          ] ++ developmentAndRuntimePackages system;
         };
       });
 
-    # Default app to run the Python script
-    apps = eachSystem (system:
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
-        pythonEnv = pkgs.python312.withPackages (python-pkgs: with python-pkgs; [ pymupdf ]);
+      devShells = forAllSystems (system: let
+        inherit (poetry2nix.lib.mkPoetry2Nix { pkgs = pkgs.${system}; }) mkPoetryEnv;
+      in {
+        default = pkgs.${system}.mkShellNoCC {
+          packages = with pkgs.${system}; [
+            (mkPoetryEnv { projectDir = self; })
+            poetry
+          ] ++ developmentAndRuntimePackages system;
+        };
+      });
+
+      apps = forAllSystems (system: let
+        inherit (poetry2nix.lib.mkPoetry2Nix { pkgs = pkgs.${system}; }) mkPoetryApplication;
       in {
         default = {
+          program = "${self.packages.${system}.default}/bin/start";
           type = "app";
-          program = "${pkgs.writeShellScript "run-pdf-inverter" ''
-            #!/bin/sh
-            exec ${pythonEnv}/bin/python3 ${self}/py.py "$@"
-          ''}";
         };
       });
 
-
-    # Provide a package for the script if desired
-    packages = eachSystem (system:
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
-      in {
-        default = pkgs.buildEnv {
-          name = "pdf-inverter";
-          paths = [
-            pkgs.ghostscript
-            pkgs.imagemagick
-            pkgs.inkscape
-            pkgs.pdftk
-            pkgs.poppler_utils
-            pkgs.coreutils
-            (pkgs.python312.withPackages (python-pkgs: with python-pkgs; [ pymupdf ]))
-          ];
-        };
-      });
-  };
+      #apps = forAllSystems ${system}.default
+    };
 }

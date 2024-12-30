@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "invertpdf"
+version = "0.1.0"
+description = "invert pdf script"
+authors = ["Yeshey <41551785+Yeshey@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+[tool.poetry.scripts]
+start = "invertpdf.main:main" # file main, runs function main
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
