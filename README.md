@@ -4,6 +4,10 @@ The point of this script is to invert all the colors of curves objects images an
 
 There are [several tools](https://gist.github.com/douglasmiranda/9c19f23c4570a7b7e02137791880ab43) for pdf conversion to svg for its manipulation, mupdf and inkscape aren't able to draw some images, and pdf2svg converts everything to raster which is not desirable. 
 
+Turns out it's pretty hard to do only with openly available tools.  
+Your best bet might still be online pdf inverters like: https://www.pdfconvertonline.com/invert-pdf/, because of all the [known-issues](#known-issues).  
+You can try something like `nix-shell -p ghostscript --command "gs -sDEVICE=pdfwrite -dPDFSETTINGS=/ebook -q -o output.pdf file.pdf"` ([from my techNotes](https://github.com/Yeshey/TechNotes?tab=readme-ov-file#1123-compress)) to compress your pdf if it's too big for the site 🤷
+
 ## Usage
 
 If you have a flakes enabled nix installation you can run it with `nix run github:Yeshey/invert-pdf-colors -- input.pdf output.pdf`
@@ -19,10 +23,6 @@ And run with `python3 -u py.py input.pdf output.pdf`
 
 > [!WARNING]  
 > Confirm images and formatting in the resulting pdf, check [known-issues](#known-issues)
-> 
-> If it didn't work correctly, the best alternative to my knowledge are online pdf inverters like: https://www.pdfconvertonline.com/invert-pdf/
->
-> You can try something like `nix-shell -p ghostscript --command "gs -sDEVICE=pdfwrite -dPDFSETTINGS=/ebook -q -o output.pdf file.pdf"` ([from my techNotes](https://github.com/Yeshey/TechNotes?tab=readme-ov-file#1123-compress)) to compress your pdf if it's too big for the site 🤷
 
 There is also (https://github.com/keotl/invert-pdf) but it converts to raster as well, but allows bigger files.
 
