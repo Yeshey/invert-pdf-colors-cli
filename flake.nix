@@ -35,7 +35,7 @@
           #];
           propagatedBuildInputs = with pkgs.${system}; [
             
-          ] ++ developmentAndRuntimePackages system;
+          ] ++ developmentAndRuntimePackages system; # runTime packages
         };
       });
 
@@ -46,7 +46,7 @@
           packages = with pkgs.${system}; [
             (mkPoetryEnv { projectDir = self; })
             poetry
-          ] ++ developmentAndRuntimePackages system;
+          ] ++ developmentAndRuntimePackages system; # development packages (`nix develop` or `direnv allow`)
         };
       });
 
@@ -59,6 +59,5 @@
         };
       });
 
-      #apps = forAllSystems ${system}.default
     };
 }
